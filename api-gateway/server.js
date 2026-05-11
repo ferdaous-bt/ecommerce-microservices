@@ -1,11 +1,18 @@
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 const express = require('express');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
+const { buildSchema } = require('graphql');
+const { ApolloServer } = require('@apollo/server');
+const { expressMiddleware } = require('@as-integrations/express5');
+const { addResolversToSchema } = require('@graphql-tools/schema');
 
-// === 1. Charger le contrat .proto ===
+const resolvers = require('./resolvers');
+
+// === 1. Charger le contrat .proto pour les routes REST ===
 const PROTO_PATH = path.join(__dirname, '../proto/users.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: false,
@@ -16,19 +23,17 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 });
 const usersProto = grpc.loadPackageDefinition(packageDefinition).users;
 
-// === 2. Créer un client gRPC vers users-service ===
+// === 2. Client gRPC pour les routes REST ===
 const usersClient = new usersProto.UserService(
   'localhost:50051',
   grpc.credentials.createInsecure()
 );
 
-// === 3. Créer le serveur Express (REST) ===
+// === 3. Express ===
 const app = express();
 app.use(express.json());
 
-// === 4. Routes REST qui appellent users-service en gRPC ===
-
-// POST /users  →  CreateUser (gRPC)
+// === 4. Routes REST (existantes) ===
 app.post('/users', (req, res) => {
   usersClient.createUser(req.body, (err, response) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -36,7 +41,6 @@ app.post('/users', (req, res) => {
   });
 });
 
-// GET /users/:id  →  GetUser (gRPC)
 app.get('/users/:id', (req, res) => {
   usersClient.getUser({ id: req.params.id }, (err, response) => {
     if (err) {
@@ -49,7 +53,6 @@ app.get('/users/:id', (req, res) => {
   });
 });
 
-// GET /users  →  ListUsers (gRPC)
 app.get('/users', (req, res) => {
   usersClient.listUsers({}, (err, response) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -57,8 +60,34 @@ app.get('/users', (req, res) => {
   });
 });
 
-// === 5. Démarrer le serveur REST ===
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(` API Gateway démarrée sur http://localhost:${PORT}`);
-});
+// === 5. GraphQL avec Apollo Server ===
+async function setupApollo() {
+  const schemaString = fs.readFileSync(
+    path.join(__dirname, 'schema.gql'),
+    'utf-8'
+  );
+  const schema = buildSchema(schemaString);
+  const schemaWithResolvers = addResolversToSchema({ schema, resolvers });
+
+  const apolloServer = new ApolloServer({ schema: schemaWithResolvers });
+  await apolloServer.start();
+
+  app.use('/graphql', express.json(), expressMiddleware(apolloServer));
+}
+
+// === 6. Demarrer le tout ===
+async function main() {
+  try {
+    await setupApollo();
+    const PORT = 3000;
+    app.listen(PORT, () => {
+      console.log('API Gateway demarree sur http://localhost:' + PORT);
+      console.log('  REST    : http://localhost:' + PORT + '/users');
+      console.log('  GraphQL : http://localhost:' + PORT + '/graphql');
+    });
+  } catch (err) {
+    console.error('Erreur au demarrage :', err);
+  }
+}
+
+main();

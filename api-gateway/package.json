@@ -11,8 +11,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "@as-integrations/express5": "^1.1.2",
+    "@graphql-tools/schema": "^10.0.33",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "graphql": "^16.14.0"
   }
 }
