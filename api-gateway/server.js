@@ -34,6 +34,17 @@ const productsClient = new productsProto.ProductService(
   grpc.credentials.createInsecure()
 );
 
+// ====== ORDERS : proto + client gRPC ======
+const ORDERS_PROTO_PATH = path.join(__dirname, '../proto/orders.proto');
+const ordersDef = protoLoader.loadSync(ORDERS_PROTO_PATH, {
+  keepCase: false, longs: String, enums: String, defaults: true, oneofs: true
+});
+const ordersProto = grpc.loadPackageDefinition(ordersDef).orders;
+const ordersClient = new ordersProto.OrderService(
+  'localhost:50053',
+  grpc.credentials.createInsecure()
+);
+
 // ====== Express ======
 const app = express();
 app.use(express.json());
@@ -126,6 +137,53 @@ app.get('/products/:id/check-stock/:quantity', (req, res) => {
   );
 });
 
+// ====== Routes REST ORDERS ======
+app.post('/orders', (req, res) => {
+  ordersClient.createOrder(req.body, (err, response) => {
+    if (err) {
+      if (err.code === grpc.status.INVALID_ARGUMENT) {
+        return res.status(400).json({ error: err.message });
+      }
+      return res.status(500).json({ error: err.message });
+    }
+    res.status(201).json(response);
+  });
+});
+
+app.get('/orders/:id', (req, res) => {
+  ordersClient.getOrder({ id: req.params.id }, (err, response) => {
+    if (err) {
+      if (err.code === grpc.status.NOT_FOUND) {
+        return res.status(404).json({ error: err.message });
+      }
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(response);
+  });
+});
+
+app.get('/users/:userId/orders', (req, res) => {
+  ordersClient.listOrdersByUser(
+    { userId: req.params.userId },
+    (err, response) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(response);
+    }
+  );
+});
+
+app.post('/orders/:id/cancel', (req, res) => {
+  ordersClient.cancelOrder({ id: req.params.id }, (err, response) => {
+    if (err) {
+      if (err.code === grpc.status.NOT_FOUND) {
+        return res.status(404).json({ error: err.message });
+      }
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(response);
+  });
+});
+
 // ====== GraphQL avec Apollo Server ======
 async function setupApollo() {
   const schemaString = fs.readFileSync(
@@ -150,6 +208,7 @@ async function main() {
       console.log('API Gateway demarree sur http://localhost:' + PORT);
       console.log('  REST users    : http://localhost:' + PORT + '/users');
       console.log('  REST products : http://localhost:' + PORT + '/products');
+      console.log('  REST orders   : http://localhost:' + PORT + '/orders');
       console.log('  GraphQL       : http://localhost:' + PORT + '/graphql');
     });
   } catch (err) {

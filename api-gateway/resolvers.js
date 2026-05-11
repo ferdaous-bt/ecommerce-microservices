@@ -35,6 +35,21 @@ const createProductAsync = promisify(productsClient.createProduct).bind(products
 const updateStockAsync = promisify(productsClient.updateStock).bind(productsClient);
 const checkStockAsync = promisify(productsClient.checkStock).bind(productsClient);
 
+// ====== ORDERS : proto + client gRPC ======
+const ORDERS_PROTO_PATH = path.join(__dirname, '../proto/orders.proto');
+const ordersDef = protoLoader.loadSync(ORDERS_PROTO_PATH, {
+  keepCase: false, longs: String, enums: String, defaults: true, oneofs: true
+});
+const ordersProto = grpc.loadPackageDefinition(ordersDef).orders;
+const ordersClient = new ordersProto.OrderService(
+  'localhost:50053',
+  grpc.credentials.createInsecure()
+);
+const createOrderAsync = promisify(ordersClient.createOrder).bind(ordersClient);
+const getOrderAsync = promisify(ordersClient.getOrder).bind(ordersClient);
+const listOrdersByUserAsync = promisify(ordersClient.listOrdersByUser).bind(ordersClient);
+const cancelOrderAsync = promisify(ordersClient.cancelOrder).bind(ordersClient);
+
 // ====== RESOLVERS ======
 const resolvers = {
   Query: {
@@ -67,6 +82,20 @@ const resolvers = {
     },
     checkStock: async (_, { productId, quantity }) => {
       return await checkStockAsync({ productId, quantity });
+    },
+
+    // --- Orders ---
+    order: async (_, { id }) => {
+      try {
+        return await getOrderAsync({ id });
+      } catch (err) {
+        if (err.code === grpc.status.NOT_FOUND) return null;
+        throw err;
+      }
+    },
+    ordersByUser: async (_, { userId }) => {
+      const response = await listOrdersByUserAsync({ userId });
+      return response.orders || [];
     }
   },
 
@@ -82,6 +111,14 @@ const resolvers = {
     },
     updateStock: async (_, { id, quantity }) => {
       return await updateStockAsync({ id, quantity });
+    },
+
+    // --- Orders ---
+    createOrder: async (_, { userId, items }) => {
+      return await createOrderAsync({ userId, items });
+    },
+    cancelOrder: async (_, { id }) => {
+      return await cancelOrderAsync({ id });
     }
   }
 };

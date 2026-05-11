@@ -1,4 +1,4 @@
-# Types
+# ========== TYPES ==========
 
 type User {
   id: ID!
@@ -19,7 +19,29 @@ type StockResponse {
   currentStock: Int!
 }
 
-# Queries (lectures)
+type OrderItem {
+  productId: ID!
+  quantity: Int!
+  unitPrice: Float!
+}
+
+type Order {
+  id: ID!
+  userId: ID!
+  items: [OrderItem!]!
+  total: Float!
+  status: String!
+  createdAt: String!
+}
+
+# Input speciaux pour passer des objets en parametre de mutation
+input OrderItemInput {
+  productId: ID!
+  quantity: Int!
+  unitPrice: Float!
+}
+
+# ========== QUERIES ==========
 
 type Query {
   users: [User!]!
@@ -28,13 +50,19 @@ type Query {
   products: [Product!]!
   product(id: ID!): Product
   checkStock(productId: ID!, quantity: Int!): StockResponse
+
+  order(id: ID!): Order
+  ordersByUser(userId: ID!): [Order!]!
 }
 
-# Mutations (modifications)
+# ========== MUTATIONS ==========
 
 type Mutation {
   createUser(email: String!, name: String!, password: String!): User
 
   createProduct(name: String!, description: String, price: Float!, stock: Int!): Product
   updateStock(id: ID!, quantity: Int!): Product
+
+  createOrder(userId: ID!, items: [OrderItemInput!]!): Order
+  cancelOrder(id: ID!): Order
 }
