@@ -8,9 +8,11 @@ npm-debug.log*
 # Bases de données SQLite (générées au runtime)
 *.db
 *.sqlite
+data/
 
 # Fichiers système Mac
 .DS_Store
+*.snapshot.json
 
 # Fichiers d'environnement (mots de passe etc.)
 .env

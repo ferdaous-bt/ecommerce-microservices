@@ -1,14 +1,40 @@
+# Types
+
 type User {
   id: ID!
   email: String!
   name: String!
 }
 
+type Product {
+  id: ID!
+  name: String!
+  description: String
+  price: Float!
+  stock: Int!
+}
+
+type StockResponse {
+  available: Boolean!
+  currentStock: Int!
+}
+
+# Queries (lectures)
+
 type Query {
   users: [User!]!
   user(id: ID!): User
+
+  products: [Product!]!
+  product(id: ID!): Product
+  checkStock(productId: ID!, quantity: Int!): StockResponse
 }
+
+# Mutations (modifications)
 
 type Mutation {
   createUser(email: String!, name: String!, password: String!): User
+
+  createProduct(name: String!, description: String, price: Float!, stock: Int!): Product
+  updateStock(id: ID!, quantity: Int!): Product
 }
