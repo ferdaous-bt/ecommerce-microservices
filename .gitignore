@@ -1,0 +1,21 @@
+# Dépendances Node
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Bases de données SQLite (générées au runtime)
+*.db
+*.sqlite
+
+# Fichiers système Mac
+.DS_Store
+
+# Fichiers d'environnement (mots de passe etc.)
+.env
+.env.local
+
+# Éditeurs
+.vscode/
+.idea/
